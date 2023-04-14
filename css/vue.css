@@ -39,6 +39,10 @@ div#app:empty::before {
     width: 0%;
     z-index: 999999;
 }
+.search{
+    position: sticky;
+    top: 0px;
+}
 .search a:hover {
     color: var(--theme-color, #42b983);
 }
@@ -205,7 +209,7 @@ main.hidden {
     border-right: 1px solid rgba(0,0,0,0.07);
     overflow-y: auto;
     padding: 40px 0 0;
-    position: absolute;
+    position: fixed;
     top: 0;
     bottom: 0;
     left: 0;
@@ -272,7 +276,7 @@ main.hidden {
     border: 0;
     outline: none;
     padding: 10px;
-    position: absolute;
+    position: fixed;
     bottom: 0;
     left: 0;
     text-align: center;
