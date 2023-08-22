@@ -694,15 +694,15 @@ body {
     color: #7f8c8d;
 }
 .markdown-section code {
+    background-color: lawngreen;
     border-radius: 2px;
     font-family: 'Roboto Mono', Monaco, courier, monospace;
     font-size: 0.8rem;
     font-weight: bold;
-    margin: 0 2px;
+    margin: 0px 2px;
     padding: 3px 5px;
     white-space: pre-wrap;
-    border: 1px solid green;
-    border-style: dashed;
+    border: 1px dashed;
 }
 .markdown-section pre {
     -moz-osx-font-smoothing: initial;
