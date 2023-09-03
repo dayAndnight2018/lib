@@ -56,11 +56,10 @@ body {
     height: 100%;
 }
 body {
-    -moz-osx-font-smoothing: grayscale;
     -webkit-font-smoothing: antialiased;
     color: #34495e;
-    font-family: 'Source Sans Pro', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 15px;
+    font-family: cursive,serif,'Source Sans Pro', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10px;
     letter-spacing: 0;
     margin: 0;
     overflow-x: hidden;
@@ -310,7 +309,7 @@ body.sticky .sidebar-toggle {
 }
 .markdown-section {
     margin: 0 auto;
-    max-width: 80%;
+    max-width: 90%;
     padding: 30px 15px 40px 15px;
     position: relative;
 }
@@ -635,6 +634,10 @@ body {
 .markdown-section strong {
     color: #dd1010;
     font-weight: 600;
+    text-shadow: 4px 4px 10px grey;
+    border: 0 0 1px 0 solid;
+    text-decoration-line: underline;
+    text-decoration-style: wavy;
 }
 .markdown-section a {
     color: var(--theme-color, #42b983);
@@ -677,10 +680,10 @@ body {
     padding-left: 1.5rem;
 }
 .markdown-section blockquote {
-    border-left: 4px solid var(--theme-color, #42b983);
-    color: #858585;
+    border-left: 2px solid var(--theme-color, #42b983);
+    color: gray;
     margin: 2em 0;
-    padding: 10px 20px;
+    padding: 5px 10px;
     background: #50cc5010;
 }
 .markdown-section blockquote p {
@@ -696,11 +699,11 @@ body {
 .markdown-section code {
     background-color: lawngreen;
     border-radius: 2px;
-    font-family: 'Roboto Mono', Monaco, courier, monospace;
+    font-family: serif,'Source Sans Pro', 'Helvetica Neue', Arial, sans-serif;
     font-size: 0.8rem;
     font-weight: bold;
     margin: 0px 2px;
-    padding: 3px 5px;
+    padding: 2px;
     white-space: pre-wrap;
     border: 1px dashed;
 }
