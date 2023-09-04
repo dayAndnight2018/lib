@@ -57,7 +57,7 @@ body {
 }
 @font-face{
     font-family: "my-kai";
-    src: url("../font/kai.ttf") format("truetype");
+    src: url("kai.ttf") format("truetype");
 }
 body {
     -webkit-font-smoothing: antialiased;
