@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css?family=Roboto+Mono|Source+Sans+Pro:300,400,600");
+@import url("https://fonts.googleapis.com/css?family=Roboto+Mono|Source+Sans+Pro:300,400,600&family=Kaushan+Script");
 * {
     -webkit-font-smoothing: antialiased;
     -webkit-overflow-scrolling: touch;
@@ -55,15 +55,10 @@ html,
 body {
     height: 100%;
 }
-@font-face{
-    font-family: "my-kai";
-    src: url("../font/kai.ttf") format("truetype");
-    font-weight: normal;
-}
 body {
     -webkit-font-smoothing: antialiased;
     color: #34495e;
-    font-family: 'my-kai',cursive,serif,'Source Sans Pro', 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Kaushan+Script',cursive,serif,'Source Sans Pro', 'Helvetica Neue', Arial, sans-serif;
     font-size: 10px;
     letter-spacing: 0;
     margin: 0;
