@@ -55,6 +55,12 @@ html,
 body {
     height: 100%;
 }
+@font-face {
+  font-family: 'kai';
+  src: url('//everspringlee.gitee.io/lib/font/kai.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
 body {
     -webkit-font-smoothing: antialiased;
     color: #34495e;
