@@ -813,6 +813,7 @@ body {
     overflow: inherit;
     padding: 2.2em 5px;
     white-space: inherit;
+    border: none;
 }
 .markdown-section code::after,
 .markdown-section code::before {
