@@ -699,8 +699,8 @@ body {
     color: #7f8c8d;
 }
 .markdown-section code {
-    background-color: lawngreen;
-    border-radius: 2px;
+    background-color: #05AA05;
+    border-radius: 5px;
     font-family: 'FZKai-Z03S',sans-serif,'Source Sans Pro', 'Helvetica Neue', Arial, sans-serif;
     font-size: 0.8rem;
     font-weight: bold;
