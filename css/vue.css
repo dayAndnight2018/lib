@@ -353,6 +353,9 @@ body.sticky .sidebar-toggle {
 .markdown-section tr {
     border-top: 1px solid #ccc;
 }
+.markdown-section del {
+    color: red;
+}
 .markdown-section tr:nth-child(2n) {
     background-color: #f8f8f8;
 }
