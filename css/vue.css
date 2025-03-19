@@ -638,14 +638,14 @@ body {
 .markdown-section h4,
 .markdown-section strong {
 /*     color: #dd1010; */
-    color: black;
+    color: #1a65db;
     font-weight: bold;
     font-size: 1.2rem;
     text-shadow: 4px 4px 10px grey;
     border: 0 0 1px 0 solid;
     text-decoration-line: underline;
     text-decoration-style: wavy;
-    text-decoration-color: #dd1010;
+    text-decoration-color: #ff2633;
 }
 .markdown-section a {
     color: var(--theme-color, #42b983);
