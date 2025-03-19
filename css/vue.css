@@ -638,8 +638,8 @@ body {
 .markdown-section h4,
 .markdown-section strong {
 /*     color: #dd1010; */
-    color: black;
-    font-weight: bold;
+    color: #074dbb;
+    font-weight: 600;
     font-size: 1.2rem;
     text-shadow: 4px 4px 10px grey;
     border: 0 0 1px 0 solid;
