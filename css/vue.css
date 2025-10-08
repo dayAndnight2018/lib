@@ -713,7 +713,8 @@ body {
     margin: 0px 2px;
     padding: 2px 5px;
     white-space: pre-wrap;
-    color: white;
+    color: rgba(0, 0, 0, 0.6);
+    text-shadow: 2px 5px 5px #05AA05;
 }
 .markdown-section pre {
     -moz-osx-font-smoothing: initial;
