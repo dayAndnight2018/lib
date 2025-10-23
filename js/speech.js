@@ -375,6 +375,12 @@
             const markdownSection = document.querySelector('.markdown-section');
             if (!markdownSection) return;
             
+            // 移除可能存在的旧按钮
+            const existingButton = document.getElementById('read-this-page');
+            if (existingButton) {
+                existingButton.remove();
+            }
+            
             // 创建阅读按钮
             const readButton = document.createElement('button');
             readButton.id = 'read-this-page';
@@ -388,12 +394,50 @@
                 阅读本文
             `;
             
-            // 添加点击事件
+            // 添加点击事件，确保读取当前页面内容
             readButton.addEventListener('click', startSpeech);
             
             // 添加到markdown内容区域的顶部
             markdownSection.insertBefore(readButton, markdownSection.firstChild);
-        }, 1500); // 延迟确保markdown内容已完全渲染
+        }, 1000); // 延迟确保markdown内容已完全渲染
+    }
+    
+    // 监听docsify页面切换事件
+    function listenForPageChanges() {
+        // docsify使用的事件
+        if (window.$docsify) {
+            // 页面切换完成后重新创建按钮
+            window.$docsify.plugins = [
+                function(hook) {
+                    // 内容渲染完成后触发
+                    hook.afterEach(function() {
+                        createPageSpeechButton();
+                    });
+                }
+            ].concat(window.$docsify.plugins || []);
+        }
+        
+        // 同时使用通用DOM变化监听作为后备
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList') {
+                    const markdownSection = document.querySelector('.markdown-section');
+                    if (markdownSection && mutation.target === markdownSection) {
+                        // 如果markdown内容发生变化，重新创建按钮
+                        createPageSpeechButton();
+                    }
+                }
+            });
+        });
+        
+        // 开始观察markdown-section的变化
+        const markdownSection = document.querySelector('.markdown-section');
+        if (markdownSection) {
+            observer.observe(markdownSection, {
+                childList: true,
+                subtree: true
+            });
+        }
     }
 
     // 初始化语音朗读功能
@@ -409,6 +453,9 @@
         
         // 添加事件监听器
         addEventListeners();
+        
+        // 监听页面切换事件
+        listenForPageChanges();
     }
 
     // 页面加载完成后初始化
