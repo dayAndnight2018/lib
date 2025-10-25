@@ -2,19 +2,21 @@
  * 语音朗读功能模块
  * 使用浏览器的SpeechSynthesis API实现文本朗读
  */
-(function() {
+(function () {
     // 检查浏览器是否支持SpeechSynthesis API
     if (!('speechSynthesis' in window)) {
         console.warn('当前浏览器不支持语音朗读功能');
         return;
     }
 
+    window.highlightedElements = [];
+
     // 创建语音朗读控制按钮
     function createSpeechControls() {
         const controls = document.createElement('div');
         controls.id = 'speech-controls';
         controls.className = 'speech-controls';
-        
+
         controls.innerHTML = `
             <button id="speech-toggle" class="speech-btn speech-toggle" title="开始朗读">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -43,7 +45,7 @@
             <input type="range" id="speech-rate" min="0.5" max="2" step="0.1" value="1" class="speech-rate" title="语速">
             <input type="range" id="speech-pitch" min="0.5" max="2" step="0.1" value="1" class="speech-pitch" title="音调">
         `;
-        
+
         document.body.appendChild(controls);
     }
 
@@ -51,40 +53,53 @@
     function initVoices() {
         const voiceSelect = document.getElementById('speech-voice');
         const voices = speechSynthesis.getVoices();
-        
+
         // 清空现有选项
         voiceSelect.innerHTML = '';
-        
+
         // 优先选择中文语音
         let hasChineseVoice = false;
         let hasEnglishVoice = false;
         let selectedVoiceSet = false;
-        
+
+        // 检查是否有Xiaoxiao语音
+        let hasXiaoxiaoVoice = false;
+
+        // 先检查是否有Xiaoxiao语音
+        voices.forEach(voice => {
+            if (voice.name === 'Xiaoxiao' || voice.name.includes('晓笑')) {
+                hasXiaoxiaoVoice = true;
+            }
+        });
+
         // 先添加中文语音
         voices.forEach(voice => {
             if (voice.lang.includes('zh')) {
                 const option = document.createElement('option');
                 option.textContent = `${voice.name} (${voice.lang})`;
                 option.value = voice.name;
-                
-                // 如果是中文语音，优先选中
-                if (!selectedVoiceSet) {
+
+                // 如果存在Xiaoxiao语音，优先选择它
+                if (voice.name === 'Xiaoxiao' || voice.name.includes('晓笑')) {
+                    option.selected = true;
+                    selectedVoiceSet = true;
+                } else if (!selectedVoiceSet) {
                     option.selected = true;
                     selectedVoiceSet = true;
                 }
-                
+
                 voiceSelect.appendChild(option);
                 hasChineseVoice = true;
             }
         });
-        
+
         // 检查是否有英文语音
         voices.forEach(voice => {
             if (voice.lang.includes('en')) {
                 hasEnglishVoice = true;
             }
         });
-        
+
         // 添加分隔线（如果有中文语音且还有英文语音）
         if (hasChineseVoice && hasEnglishVoice) {
             const separator = document.createElement('option');
@@ -92,24 +107,24 @@
             separator.textContent = '-------------------';
             voiceSelect.appendChild(separator);
         }
-        
+
         // 添加英文语音
         voices.forEach(voice => {
             if (voice.lang.includes('en') && !voice.lang.includes('zh')) {
                 const option = document.createElement('option');
                 option.textContent = `${voice.name} (${voice.lang})`;
                 option.value = voice.name;
-                
+
                 // 如果还没有选中项，选择默认的英文语音
                 if (!selectedVoiceSet && voice.default) {
                     option.selected = true;
                     selectedVoiceSet = true;
                 }
-                
+
                 voiceSelect.appendChild(option);
             }
         });
-        
+
         // 如果没有中文和英文语音，添加提示信息
         if (voiceSelect.options.length === 0) {
             const option = document.createElement('option');
@@ -122,76 +137,616 @@
         }
     }
 
+    // 清除所有高亮效果，恢复原始样式
+    function clearHighlights() {
+        try {
+            // 移除高亮覆盖层
+            const overlay = document.getElementById('speech-highlight-overlay');
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+
+            if (window.highlightedElements && window.highlightedElements.length > 0) {
+                window.highlightedElements.forEach(element => {
+                    // 确保element是有效的DOM元素
+                    if (element instanceof HTMLElement) {
+                        // 恢复原始样式：清除所有可能添加的样式
+                        element.style.removeProperty('font-size');
+                        element.style.removeProperty('color');
+                        element.style.removeProperty('font-weight');
+                        element.style.removeProperty('background-color');
+                        element.style.removeProperty('transition');
+                        element.style.removeProperty('text-decoration');
+                        element.style.removeProperty('display');
+                        element.style.removeProperty('padding');
+                        element.style.removeProperty('margin');
+                        element.style.removeProperty('border-radius');
+                        element.style.removeProperty('box-shadow');
+                        element.style.removeProperty('opacity');
+
+                        // 移除高亮类
+                        element.classList.remove('speech-highlighting-active');
+                    }
+                });
+                // 清空高亮元素数组，确保不会重复清除
+                window.highlightedElements = [];
+            }
+
+            // 额外安全检查：清除页面上所有可能遗漏的高亮类
+            document.querySelectorAll('.speech-highlighting-active').forEach(el => {
+                if (el instanceof HTMLElement) {
+                    // 清除所有可能的内联样式
+                    const propertiesToRemove = ['font-size', 'color', 'font-weight', 'background-color',
+                        'transition', 'text-decoration', 'display', 'padding',
+                        'margin', 'border-radius', 'box-shadow', 'opacity'];
+
+                    propertiesToRemove.forEach(prop => {
+                        el.style.removeProperty(prop);
+                    });
+
+                    // 移除高亮类
+                    el.classList.remove('speech-highlighting-active');
+                }
+            });
+        } catch (error) {
+            console.error('清除高亮出错:', error);
+        }
+    }
+
+    // 添加自动滚动到元素的函数
+    function scrollToElement(element) {
+        if (!element || !(element instanceof HTMLElement)) return;
+
+        try {
+            // 获取元素位置信息
+            const rect = element.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const viewportWidth = window.innerWidth;
+
+            // 计算滚动位置，确保元素在视口的上1/3处，这样用户可以看到后面的内容
+            const targetTop = window.scrollY + rect.top - (viewportHeight * 0.3);
+            const targetLeft = window.scrollX + rect.left - (viewportWidth * 0.5);
+
+            // 使用平滑滚动
+            window.scrollTo({
+                top: targetTop,
+                left: targetLeft,
+                behavior: 'smooth'
+            });
+        } catch (error) {
+            console.error('滚动到元素时出错:', error);
+        }
+    }
+
+
+    // 添加高亮CSS样式
+    function addHighlightCSS() {
+        // 检查是否已经添加了样式，避免重复添加
+        if (!document.getElementById('speech-highlight-style')) {
+            const style = document.createElement('style');
+            style.id = 'speech-highlight-style';
+            style.textContent = `
+                /* 闪烁动画关键帧 */
+                @keyframes speech-pulse {
+                    0%, 100% {
+                        opacity: 1;
+                        box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
+                    }
+                    50% {
+                        opacity: 0.7;
+                        box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+                    }
+                }
+                
+                /* 极高优先级的高亮样式，针对docsify页面优化 */
+                .markdown-section .speech-highlighting-active,
+                .markdown-section .speech-highlighting-active * {
+                    font-size: 1.1em !important;
+                    color: #ff0000 !important;
+                    font-weight: bold !important;
+                    background-color: rgba(255, 255, 0, 0.4) !important;
+                    transition: all 0.3s ease !important;
+                    text-decoration: underline !important;
+                    display: inline-block !important;
+                    padding: 2px 4px !important;
+                    margin: -2px -4px !important;
+                    border-radius: 3px !important;
+                    box-shadow: 0 0 8px rgba(255, 165, 0, 0.5) !important;
+                    animation: speech-pulse 1.5s infinite !important;
+                }
+                
+                /* 特别针对markdown-section中的各种元素 */
+                .markdown-section p .speech-highlighting-active,
+                .markdown-section li .speech-highlighting-active,
+                .markdown-section h1 .speech-highlighting-active,
+                .markdown-section h2 .speech-highlighting-active,
+                .markdown-section h3 .speech-highlighting-active,
+                .markdown-section h4 .speech-highlighting-active,
+                .markdown-section h5 .speech-highlighting-active,
+                .markdown-section h6 .speech-highlighting-active {
+                    font-size: 1.1em !important;
+                    color: #ff0000 !important;
+                    font-weight: bold !important;
+                    background-color: rgba(255, 255, 0, 0.4) !important;
+                    animation: speech-pulse 1.5s infinite !important;
+                }
+                
+                /* 高亮覆盖层样式 */
+                #speech-highlight-overlay {
+                    position: absolute;
+                    z-index: 9999 !important;
+                    background-color: rgba(255, 255, 0, 0.5) !important;
+                    border: 2px solid #ff0000 !important;
+                    border-radius: 4px !important;
+                    pointer-events: none !important;
+                    transition: all 0.3s ease !important;
+                    box-shadow: 0 0 10px rgba(255, 0, 0, 0.6) !important;
+                    padding: 2px !important;
+                    animation: speech-pulse 1.5s infinite !important;
+                }
+                
+                /* 确保高亮在各种嵌套结构中都能正确显示 */
+                .markdown-section pre code .speech-highlighting-active,
+                .markdown-section blockquote .speech-highlighting-active,
+                .markdown-section table .speech-highlighting-active {
+                    color: #ff0000 !important;
+                    background-color: rgba(255, 255, 0, 0.6) !important;
+                    font-weight: bold !important;
+                    animation: speech-pulse 1.5s infinite !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    // 高亮显示当前朗读的文本 - 适配新的speechQueue结构
+    function highlightCurrentElement(index) {
+        // 确保高亮CSS已添加
+        addHighlightCSS();
+        // 先清除之前的高亮
+        clearHighlights();
+
+        try {
+            // 确保索引有效
+            if (typeof index !== 'number' || isNaN(index)) {
+                console.warn('无效的索引类型:', index);
+                return false;
+            }
+
+            // 优先使用speechQueue中的DOM元素信息（新方式）
+            if (window.speechQueue && window.speechQueue.length > index && window.speechQueue[index].element) {
+                console.log('使用speechQueue中的DOM元素进行高亮');
+                const speechItem = window.speechQueue[index];
+                const target = speechItem.wrappedElement || speechItem.element;
+                
+                if (target && target instanceof HTMLElement) {
+                    // 确保target在文档中
+                    if (!document.body.contains(target)) {
+                        console.warn('目标元素不在文档中');
+                        return false;
+                    }
+
+                    // 检查元素是否在markdown-section中
+                    const isInMarkdownSection = target.closest('.markdown-section') !== null;
+
+                    // 根据元素类型和位置调整高亮样式参数
+                    const fontSize = isInMarkdownSection ? '1em' : '1.1em';
+                    const bgColor = isInMarkdownSection ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 0, 0.2)';
+
+                    // 清除目标元素上可能存在的任何冲突样式
+                    const conflictingStyles = ['font-size', 'color', 'font-weight', 'background-color',
+                        'transition', 'text-decoration'];
+                    conflictingStyles.forEach(style => {
+                        target.style.removeProperty(style);
+                    });
+
+                    // 应用文字级别高亮样式
+                    target.style.setProperty('font-size', fontSize, 'important');
+                    target.style.setProperty('color', '#ff0000', 'important');
+                    target.style.setProperty('font-weight', 'bold', 'important');
+                    target.style.setProperty('background-color', bgColor, 'important');
+                    target.style.setProperty('transition', 'all 0.1s ease', 'important');
+                    target.style.setProperty('text-decoration', 'none', 'important');
+
+                    // 添加CSS类作为额外保障
+                    target.classList.add('speech-highlighting-active');
+
+                    // 记录高亮的元素
+                    window.highlightedElements.push(target);
+
+                    // 自动滚动到高亮元素
+                    scrollToElement(target);
+                    
+                    console.log('已成功高亮speechQueue中的元素:', target);
+                    return true;
+                }
+            }
+            
+            // 后备方案：使用原始的sentenceElements（保持向后兼容）
+            if (!window.sentenceElements) {
+                console.warn('sentenceElements未初始化');
+                return false;
+            }
+
+            if (index >= 0 && index < window.sentenceElements.length) {
+                const marker = window.sentenceElements[index];
+
+                // 获取高亮目标元素
+                const target = getHighlightTarget(marker);
+                console.log('获取到的高亮目标元素(兼容模式):', target);
+                if (target && target instanceof HTMLElement) {
+                    // 确保target在文档中
+                    if (!document.body.contains(target)) {
+                        console.warn('目标元素不在文档中');
+                        return false;
+                    }
+
+                    // 检查元素是否在markdown-section中
+                    const isInMarkdownSection = target.closest('.markdown-section') !== null;
+
+                    // 根据元素类型和位置调整高亮样式参数
+                    const fontSize = isInMarkdownSection ? '1em' : '1.1em';
+                    const bgColor = isInMarkdownSection ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 0, 0.2)';
+
+                    // 清除目标元素上可能存在的任何冲突样式
+                    const conflictingStyles = ['font-size', 'color', 'font-weight', 'background-color',
+                        'transition', 'text-decoration'];
+                    conflictingStyles.forEach(style => {
+                        target.style.removeProperty(style);
+                    });
+
+                    // 应用文字级别高亮样式
+                    target.style.setProperty('font-size', fontSize, 'important');
+                    target.style.setProperty('color', '#ff0000', 'important');
+                    target.style.setProperty('font-weight', 'bold', 'important');
+                    target.style.setProperty('background-color', bgColor, 'important');
+                    target.style.setProperty('transition', 'all 0.1s ease', 'important');
+                    target.style.setProperty('text-decoration', 'none', 'important');
+
+                    // 添加CSS类作为额外保障
+                    target.classList.add('speech-highlighting-active');
+
+                    // 记录高亮的元素
+                    window.highlightedElements.push(target);
+
+                    // 自动滚动到高亮元素
+                    scrollToElement(target);
+                    return true;
+                }
+            }
+        } catch (error) {
+            console.error('高亮当前元素时出错:', error);
+        }
+
+        return true;
+    }
+
+    // 检查元素是否在视口中
+    function isElementInViewport(el) {
+        const rect = el.getBoundingClientRect();
+        return (
+            rect.top >= -rect.height &&
+            rect.left >= -rect.width &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) + rect.height &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth) + rect.width
+        );
+    }
+
+    // 为元素添加朗读标记，用于追踪
+    function markElementsForSpeech() {
+        const markdownSection = document.querySelector('.markdown-section');
+        if (!markdownSection) return [];
+
+        // 重置句子元素数组
+        window.sentenceElements = [];
+
+        // 获取重要元素
+        const importantElements = markdownSection.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, pre');
+
+        importantElements.forEach((element, elementIndex) => {
+            // 为标题元素添加前缀
+            let prefix = '';
+            if (element.tagName.match(/H[1-6]/)) {
+                const level = parseInt(element.tagName[1]);
+                if (level === 1) prefix = '标题：';
+                else if (level === 2) prefix = '小节：';
+                else prefix = '要点：';
+            }
+
+            // 处理代码块
+            if (element.tagName.toLowerCase() === 'pre') {
+                // 为代码块添加提示
+                const codeElement = element.querySelector('code');
+                if (codeElement) {
+                    // 创建标记
+                    const marker = document.createElement('span');
+                    marker.className = 'speech-marker';
+                    marker.dataset.content = prefix + '【重要代码块开始】' + codeElement.textContent + '【重要代码块结束】';
+                    // marker.style.display = 'none'; // 隐藏标记
+                    element.appendChild(marker);
+                    // 关键修复：设置wrappedElement属性指向code元素，这样可以高亮显示代码内容
+                    marker.wrappedElement = codeElement;
+                    window.sentenceElements.push(marker);
+                }
+            } else {
+                // 对于其他元素，按照句子分割
+                const textContent = element.textContent.trim();
+                if (textContent) {
+                    // 使用正则表达式按句子分割
+                    const sentences = textContent.split(/([。！？；：])/).filter(s => s.trim());
+
+                    if (sentences.length === 1) {
+                        // 单个句子，直接标记整个元素
+                        const marker = document.createElement('span');
+                        marker.className = 'speech-marker';
+                        marker.dataset.content = prefix + sentences[0];
+                        // marker.style.display = 'none'; // 隐藏标记
+                        element.appendChild(marker);
+                        // 关键修复：设置wrappedElement属性指向要高亮的元素
+                        marker.wrappedElement = element;
+                        window.sentenceElements.push(marker);
+                    } else {
+                        // 多个句子，需要更精确地标记
+                        let lastIndex = 0;
+                        let currentContent = textContent;
+
+                        for (let i = 0; i < sentences.length; i += 2) { // 每两个元素组成一个句子（内容+标点）
+                            const sentence = sentences[i] + (sentences[i + 1] || '');
+                            const sentenceWithPrefix = (i === 0 ? prefix : '') + sentence;
+
+                            // 查找句子在原始文本中的位置
+                            const startIndex = currentContent.indexOf(sentence);
+                            if (startIndex !== -1) {
+                                // 创建标记元素
+                                const marker = document.createElement('span');
+                                marker.className = 'speech-marker';
+                                marker.dataset.content = sentenceWithPrefix;
+                                // marker.style.display = 'none'; // 隐藏标记
+
+                                // 找到原始元素中对应的文本节点进行包装
+                                wrapTextInElement(element, startIndex + lastIndex, startIndex + lastIndex + sentence.length, marker);
+
+                                window.sentenceElements.push(marker);
+
+                                lastIndex += startIndex + sentence.length;
+                                currentContent = currentContent.substring(startIndex + sentence.length);
+                            }
+                        }
+                    }
+                }
+            }
+
+        });
+
+        // 同时处理内联code元素
+        const inlineCodeElements = markdownSection.querySelectorAll('code:not(pre code)');
+        inlineCodeElements.forEach(element => {
+            const parent = element.parentElement;
+            // 确保父元素不是pre
+            if (parent.tagName.toLowerCase() !== 'pre') {
+                // 为内联code添加提示
+                const marker = document.createElement('span');
+                marker.className = 'speech-marker';
+                marker.dataset.content = '【重要代码：' + element.textContent + '】';
+                // marker.style.display = 'none'; // 隐藏标记
+
+                // 包装内联code元素
+                wrapElementWithMarker(element, marker);
+
+                window.sentenceElements.push(marker);
+            }
+        });
+
+        return window.sentenceElements;
+    }
+
+    // 在元素中包装特定文本范围
+    function wrapTextInElement(element, start, end, marker) {
+        function traverseTextNodes(node, rangeStart, rangeEnd, callback) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const nodeLength = node.nodeValue.length;
+
+                if (rangeEnd <= 0 || rangeStart >= nodeLength) {
+                    return 0;
+                }
+
+                const startIndex = Math.max(0, rangeStart);
+                const endIndex = Math.min(nodeLength, rangeEnd);
+
+                if (startIndex < endIndex) {
+                    callback(node, startIndex, endIndex);
+                }
+
+                return nodeLength;
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                let accumulatedLength = 0;
+                const childNodes = Array.from(node.childNodes);
+
+                for (let i = 0; i < childNodes.length && accumulatedLength < rangeEnd; i++) {
+                    const nodeLength = traverseTextNodes(childNodes[i],
+                        rangeStart - accumulatedLength,
+                        rangeEnd - accumulatedLength,
+                        callback);
+                    accumulatedLength += nodeLength;
+                }
+
+                return accumulatedLength;
+            }
+
+            return 0;
+        }
+
+        // 为每个文本节点段创建独立的wrapper
+        let firstWrapper = null;
+
+        traverseTextNodes(element, start, end, (node, startIndex, endIndex) => {
+            const parent = node.parentNode;
+
+            // 拆分文本节点
+            if (startIndex > 0) {
+                parent.insertBefore(document.createTextNode(node.nodeValue.substring(0, startIndex)), node);
+            }
+
+            // 为当前文本段创建新的wrapper
+            const wrapper = document.createElement('span');
+            wrapper.className = 'speech-highlight-target';
+            wrapper.textContent = node.nodeValue.substring(startIndex, endIndex);
+            parent.insertBefore(wrapper, node);
+
+            // 保存第一个wrapper的引用作为marker的wrappedElement
+            if (!firstWrapper) {
+                firstWrapper = wrapper;
+                marker.wrappedElement = wrapper;
+            }
+
+            // 处理剩余文本
+            if (endIndex < node.nodeValue.length) {
+                parent.insertBefore(document.createTextNode(node.nodeValue.substring(endIndex)), node);
+            }
+
+            // 移除原始节点
+            parent.removeChild(node);
+        });
+
+        // 确保至少有一个wrapper被设置
+        if (!marker.wrappedElement && firstWrapper) {
+            marker.wrappedElement = firstWrapper;
+        }
+    }
+
+    // 用marker包装元素
+    function wrapElementWithMarker(element, marker) {
+        const parent = element.parentNode;
+        if (!parent) return;
+
+        // 创建一个包装器，确保code元素仍然可见
+        const wrapper = document.createElement('span');
+        wrapper.className = 'speech-highlight-target';
+
+        // 先将marker插入到element之前
+        parent.insertBefore(marker, element);
+
+        // 将wrapper插入到element之前
+        parent.insertBefore(wrapper, element);
+
+        // 将element移动到wrapper中
+        wrapper.appendChild(element);
+
+        // 更新引用到wrapper
+        marker.wrappedElement = wrapper;
+    }
+
+    // 获取高亮目标元素
+    function getHighlightTarget(marker) {
+        try {
+            // 确保marker是有效的DOM元素
+            if (!marker || !(marker instanceof Node)) {
+                console.warn('无效的标记元素');
+                return null;
+            }
+
+            // 优先使用wrappedElement属性（如果存在）
+            if (marker.wrappedElement && marker.wrappedElement instanceof HTMLElement) {
+                return marker.wrappedElement;
+            }
+
+            // 如果是文本节点，尝试使用其父元素
+            if (marker.nodeType === Node.TEXT_NODE && marker.parentNode instanceof HTMLElement) {
+                // 检查是否在markdown-section中
+                const markdownSection = marker.parentNode.closest('.markdown-section');
+                if (markdownSection) {
+                    // 在markdown-section中，返回文本节点的直接父元素
+                    return marker.parentNode;
+                }
+            }
+
+            // 如果marker本身是HTMLElement，直接返回
+            if (marker instanceof HTMLElement) {
+                // 对于markdown-section中的特殊元素，确保正确高亮
+                const isInMarkdownSection = marker.closest('.markdown-section') !== null;
+
+                // 对于代码块、引用块等特殊元素，确保返回最合适的高亮目标
+                if (isInMarkdownSection) {
+                    // 检查是否是嵌套在特殊元素中的文本
+                    const specialParent = marker.closest('pre, blockquote, table');
+                    if (specialParent && specialParent !== marker) {
+                        // 如果在特殊元素内，但不是直接子元素，返回marker
+                        return marker;
+                    }
+                }
+                return marker;
+            }
+
+            // 默认返回marker
+            return marker;
+        } catch (error) {
+            console.error('获取高亮目标元素出错:', error);
+            return marker;
+        }
+    }
+
     // 获取页面内容用于朗读
     function getPageContent() {
-        const markdownSection = document.querySelector('.markdown-section');
-        if (!markdownSection) return '';
-        
-        // 创建一个临时元素来提取文本，保留标题和段落结构
-        const temp = document.createElement('div');
-        temp.innerHTML = markdownSection.innerHTML;
-        
-        // 移除不需要朗读的元素（保留code元素）
-        const elementsToRemove = temp.querySelectorAll('script, style, img');
-        elementsToRemove.forEach(el => el.remove());
-        
-        // 处理pre和code元素，为其添加朗读提示
-        const codeBlocks = temp.querySelectorAll('pre, code');
-        codeBlocks.forEach(el => {
-            // 为代码块添加提示词
-            const parentEl = el.parentElement;
-            const isPre = el.tagName.toLowerCase() === 'pre';
-            const isCodeInsidePre = el.tagName.toLowerCase() === 'code' && parentEl.tagName.toLowerCase() === 'pre';
-            
-            if (isPre) {
-                // 对于pre代码块，保留其内容但添加提示词
-                const originalContent = el.innerHTML;
-                el.innerHTML = '<span class="code-block-label"></span>' + originalContent + '<span class="code-block-label"></span>';
-            } else if (!isCodeInsidePre && el.tagName.toLowerCase() === 'code') {
-                // 对于内联code元素，保留其内容但添加提示词
-                const originalContent = el.textContent;
-                el.innerHTML = '<span class="inline-code-label"></span>' + originalContent;
-            }
-        });
-        
-        // 获取文本内容，保留换行以保持结构
+        // 为元素添加朗读标记
+        markElementsForSpeech();
+
+        // 重置句子索引
+        window.currentSentenceIndex = 0;
+
+        // 从标记中提取文本内容
         let text = '';
-        
-        // 优先获取标题和段落
-        const importantElements = temp.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, pre, code');
-        
-        importantElements.forEach(el => {
-            if (el.textContent.trim()) {
-                // 为不同级别的标题添加适当的提示词
-                if (el.tagName.match(/H[1-6]/)) {
-                    const level = parseInt(el.tagName[1]);
-                    if (level === 1) text += '标题：';
-                    else if (level === 2) text += '小节：';
-                    else text += '要点：';
+        window.sentenceElements.forEach((marker, index) => {
+            if (marker.dataset.content) {
+                let content = marker.dataset.content;
+
+                // 过滤表情符号
+                content = filterEmojis(content);
+
+                // 添加适当的停顿标记
+                if (content.includes('【重要代码块')) {
+                    text += '[停顿=500]' + content + '[停顿=500]。\n';
+                } else if (content.includes('【重要代码：')) {
+                    text += '[强调]' + content + '[/强调][停顿=300]。\n';
+                } else if (content.startsWith('标题：')) {
+                    text += '[停顿=500]' + content + '[停顿=400]。\n';
+                } else if (content.startsWith('小节：')) {
+                    text += '[停顿=400]' + content + '[停顿=300]。\n';
+                } else if (content.startsWith('要点：')) {
+                    text += '[停顿=300]' + content + '[停顿=300]。\n';
+                } else {
+                    // 在句号、问号、感叹号后添加停顿标记
+                    let processedContent = content.replace(/([。！？])(?=[^\n])/g, '$1[停顿=300]');
+                    // 在分号和冒号后添加较短的停顿标记
+                    processedContent = processedContent.replace(/([；：])(?=[^\n])/g, '$1[停顿=200]');
+                    text += processedContent + '[停顿=300]。\n';
                 }
-                
-                // 获取元素文本内容
-                let elementText = el.textContent.trim();
-                
-                // 对于pre元素，添加换行以提高可读性
-                if (el.tagName.toLowerCase() === 'pre') {
-                    // 替换多余的空行为单个换行
-                    elementText = elementText.replace(/\n\s*\n/g, '\n');
-                    // 限制每行长度，避免过长
-                    const lines = elementText.split('\n');
-                    elementText = lines.map(line => line.length > 50 ? line.substring(0, 50) + '...' : line).join('\n');
-                }
-                
-                text += elementText + '。\n';
             }
         });
-        
+
+        // 如果没有内容，尝试获取原始文本
+        if (!text.trim()) {
+            const markdownSection = document.querySelector('.markdown-section');
+            if (markdownSection) {
+                text = filterEmojis(markdownSection.textContent.trim());
+            }
+        }
+
+        return text;
+
         // 如果重要元素为空，尝试获取所有文本
         if (!text.trim()) {
             text = temp.textContent.trim();
         }
-        
+
         return text;
+    }
+
+    // 过滤表情符号
+    function filterEmojis(text) {
+        // 表情符号正则表达式，覆盖常见的emoji和一些特殊符号
+        const emojiRegex = /[\u{1F600}-\u{1F6FF}\u{1F300}-\u{1F5FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{1F191}-\u{1F251}\u{1F44D}-\u{1F44E}\u{1F44F}-\u{1F450}\u{1F466}-\u{1F470}\u{1F471}-\u{1F480}\u{1F481}-\u{1F490}\u{1F491}-\u{1F4A0}\u{1F4A1}-\u{1F4B0}\u{1F4B1}-\u{1F4C0}\u{1F4C1}-\u{1F4D0}\u{1F4D1}-\u{1F4E0}\u{1F4E1}-\u{1F4F0}\u{1F4F1}-\u{1F4FF}\u{1F500}-\u{1F53F}\u{1F540}-\u{1F567}\u{1F56F}\u{1F570}-\u{1F573}\u{1F574}-\u{1F587}\u{1F58A}-\u{1F58D}\u{1F590}\u{1F591}\u{1F592}\u{1F593}\u{1F595}\u{1F596}\u{1F597}\u{1F598}\u{1F599}\u{1F5A5}\u{1F5A6}\u{1F5A7}\u{1F5A8}\u{1F5A9}\u{1F5B0}\u{1F5B1}\u{1F5B2}\u{1F5B3}\u{1F5B4}\u{1F5B5}\u{1F5B6}\u{1F5B7}\u{1F5B8}\u{1F5B9}\u{1F5BA}\u{1F5BB}\u{1F5BC}\u{1F5BD}\u{1F5BE}\u{1F5BF}\u{1F5C0}\u{1F5C1}\u{1F5C2}\u{1F5C3}\u{1F5C4}\u{1F5C5}\u{1F5C6}\u{1F5C7}\u{1F5C8}\u{1F5C9}\u{1F5CA}\u{1F5CB}\u{1F5CC}\u{1F5CD}\u{1F5CE}\u{1F5CF}\u{1F5D0}\u{1F5D1}\u{1F5D2}\u{1F5D3}\u{1F5D4}\u{1F5D5}\u{1F5D6}\u{1F5D7}\u{1F5D8}\u{1F5D9}\u{1F5DA}\u{1F5DB}\u{1F5DC}\u{1F5DD}\u{1F5DE}\u{1F5DF}\u{1F5E0}\u{1F5E1}\u{1F5E2}\u{1F5E3}\u{1F5E4}\u{1F5E5}\u{1F5E6}\u{1F5E7}\u{1F5E8}\u{1F5E9}\u{1F5EA}\u{1F5EB}\u{1F5EC}\u{1F5ED}\u{1F5EE}\u{1F5EF}\u{1F5F0}\u{1F5F1}\u{1F5F2}\u{1F5F3}\u{1F5F4}\u{1F5F5}\u{1F5F6}\u{1F5F7}\u{1F5F8}\u{1F5F9}\u{1F5FA}\u{1F5FB}\u{1F5FC}\u{1F5FD}\u{1F5FE}\u{1F5FF}\u{200D}\u{FE0F}]/gu;
+        var target = text.replace(emojiRegex, '');
+        return target;
     }
 
     // 全局变量用于分段朗读
@@ -199,35 +754,119 @@
     window.currentSegmentIndex = 0;   // 当前段落索引
     window.isPaused = false;          // 是否暂停
     window.isStopped = false;         // 是否停止
-    
-    // 将文本分成多个段落，每个段落不超过1000个字符
-    function splitTextIntoSegments(text) {
-        const segments = [];
-        const maxSegmentLength = 1000; // 每个段落的最大长度
-        
-        for (let i = 0; i < text.length; i += maxSegmentLength) {
-            // 尝试在句号处分割，保持语义完整性
-            let end = Math.min(i + maxSegmentLength, text.length);
-            
-            // 如果不是最后一段，尝试找到最近的句号作为分割点
-            if (end < text.length) {
-                const periodIndex = text.lastIndexOf('。', end);
-                const commaIndex = text.lastIndexOf('，', end);
-                const spaceIndex = text.lastIndexOf(' ', end);
-                
-                // 优先在句号处分割，其次是逗号，最后是空格
-                if (periodIndex > i) end = periodIndex + 1;
-                else if (commaIndex > i) end = commaIndex + 1;
-                else if (spaceIndex > i) end = spaceIndex + 1;
+    window.currentVoice = null;       // 当前使用的语音引擎
+    // 添加测试函数，方便手动测试高亮功能
+    window.testHighlight = function (index) {
+        console.log('测试高亮功能，索引:', index);
+        // 确保先初始化元素
+        if (!window.sentenceElements || window.sentenceElements.length === 0) {
+            console.log('尝试初始化sentenceElements...');
+            markElementsForSpeech();
+        }
+
+        if (window.sentenceElements && window.sentenceElements.length > 0) {
+            // 如果没有指定索引，默认高亮第一个元素
+            const testIndex = (typeof index === 'number' && index >= 0 && index < window.sentenceElements.length) ? index : 0;
+            console.log('高亮索引:', testIndex, '内容:', window.sentenceElements[testIndex]?.dataset?.content || '未知内容');
+            // 调用highlightCurrentElement函数进行测试
+            highlightCurrentElement(testIndex);
+            return true;
+        } else {
+            console.error('未找到可高亮的元素，请先调用startSpeech或刷新页面');
+            return false;
+        }
+    };
+
+    // 添加一个可见的测试按钮到页面
+    function addTestButton() {
+        // 检查按钮是否已存在
+        if (document.getElementById('speech-test-button')) return;
+
+        const button = document.createElement('button');
+        button.id = 'speech-test-button';
+        button.textContent = '测试高亮功能';
+        button.style.position = 'fixed';
+        button.style.bottom = '20px';
+        button.style.right = '20px';
+        button.style.zIndex = '9999';
+        button.style.padding = '10px 20px';
+        button.style.backgroundColor = '#4CAF50';
+        button.style.color = 'white';
+        button.style.border = 'none';
+        button.style.borderRadius = '5px';
+        button.style.cursor = 'pointer';
+        button.style.fontSize = '16px';
+
+        button.onclick = function () {
+            // 确保先初始化标记元素
+            if (!window.sentenceElements || window.sentenceElements.length === 0) {
+                markElementsForSpeech();
             }
-            
-            segments.push(text.substring(i, end));
+
+            // 高亮第一个元素
+            if (window.sentenceElements && window.sentenceElements.length > 0) {
+                highlightCurrentElement(0);
+                alert('高亮测试完成，请查看第一个段落是否已高亮');
+            } else {
+                alert('未找到可高亮的元素，请刷新页面后重试');
+            }
+        };
+
+        document.body.appendChild(button);
+    }
+
+    // 在页面加载完成后添加测试按钮
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addTestButton);
+    } else {
+        addTestButton();
+    }
+
+    // 将文本直接拆分为句子数组，每个句子作为一个朗读单元
+    function splitTextIntoSegments(text) {
+        const sentences = [];
+        
+        // 增强版句子分隔符正则表达式，包含更多中英文标点场景
+        // 支持句号、感叹号、问号、分号、冒号等标点作为句子结束
+        const sentenceEndings = /([。！？.!?；;：:])\s*/g;
+        
+        let match;
+        let lastIndex = 0;
+        let currentSentence = '';
+        
+        // 精确提取所有句子
+        while ((match = sentenceEndings.exec(text)) !== null) {
+            // 提取当前句子（包括结束标点）
+            currentSentence = text.substring(lastIndex, match.index) + match[0];
+            // 确保句子不为空且去除多余空白
+            const trimmedSentence = currentSentence.trim();
+            if (trimmedSentence) {
+                // 过滤掉纯标点符号的句子
+                if (!/^[。！？.!?；;：:]+$/.test(trimmedSentence)) {
+                    sentences.push(trimmedSentence);
+                }
+            }
+            lastIndex = match.index + match[0].length;
         }
         
-        return segments;
+        // 处理最后一段文本（如果没有结束标点）
+        if (lastIndex < text.length) {
+            currentSentence = text.substring(lastIndex).trim();
+            if (currentSentence && !/^[。！？.!?；;：:]+$/.test(currentSentence)) {
+                sentences.push(currentSentence);
+            }
+        }
+        
+        // 保存句子信息
+        window.allSentences = sentences;
+        
+        console.log('文本拆分为', sentences.length, '个句子，每个句子作为独立的朗读单元');
+        
+        // 直接返回句子数组，每个句子作为一个朗读单元
+        return sentences;
     }
-    
-    // 朗读队列中的下一个段落
+
+    // 朗读队列中的下一个句子
     function speakNextSegment() {
         // 如果已停止或队列为空，重置状态
         if (window.isStopped || window.speechQueue.length <= window.currentSegmentIndex) {
@@ -238,28 +877,153 @@
             window.isPaused = false;
             return;
         }
-        
+
         // 取消当前所有朗读
         speechSynthesis.cancel();
+
+        // 获取下一个朗读项（包含文本和DOM元素信息）
+        const speechItem = window.speechQueue[window.currentSegmentIndex];
+        const text = speechItem.text;
+        console.log(`开始朗读句子 ${window.currentSegmentIndex}:`, text);
         
-        // 获取下一个段落
-        const text = window.speechQueue[window.currentSegmentIndex];
-        
-        // 创建新的语音实例
-        const utterance = new SpeechSynthesisUtterance(text);
-        
-        // 设置语音参数
-        const voiceSelect = document.getElementById('speech-voice');
-        const voices = speechSynthesis.getVoices();
-        const selectedVoice = voices.find(voice => voice.name === voiceSelect.value);
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
+        // 使用speechQueue中的元素直接进行高亮
+        // 因为现在speechQueue中的每个项都直接包含了需要高亮的DOM元素
+        console.log(`高亮句子索引: ${window.currentSegmentIndex}，元素类型:`, speechItem.element ? speechItem.element.tagName : '未知');
+        // 清除高亮更新定时器，避免冲突
+        if (window.highlightUpdateTimer) {
+            clearTimeout(window.highlightUpdateTimer);
+            window.highlightUpdateTimer = null;
         }
         
-        utterance.rate = parseFloat(document.getElementById('speech-rate').value);
-        utterance.pitch = parseFloat(document.getElementById('speech-pitch').value);
-        utterance.lang = selectedVoice ? selectedVoice.lang : 'zh-CN';
-        
+        try {
+            // 直接使用speechItem中的DOM元素进行高亮
+            const target = speechItem.wrappedElement || speechItem.element;
+            if (target) {
+                // 确保高亮CSS已添加
+                addHighlightCSS();
+                // 清除之前的高亮
+                clearHighlights();
+                
+                // 设置高亮样式
+                const fontSize = target.closest('.markdown-section') ? '1em' : '1.1em';
+                const bgColor = target.closest('.markdown-section') ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 0, 0.2)';
+                
+                // 清除目标元素上可能存在的任何冲突样式
+                const conflictingStyles = ['font-size', 'color', 'font-weight', 'background-color',
+                    'transition', 'text-decoration'];
+                conflictingStyles.forEach(style => {
+                    target.style.removeProperty(style);
+                });
+                
+                // 应用文字级别高亮样式
+                target.style.setProperty('font-size', fontSize, 'important');
+                target.style.setProperty('color', '#ff0000', 'important');
+                target.style.setProperty('font-weight', 'bold', 'important');
+                target.style.setProperty('background-color', bgColor, 'important');
+                target.style.setProperty('transition', 'all 0.1s ease', 'important');
+                target.style.setProperty('text-decoration', 'none', 'important');
+                
+                // 添加CSS类作为额外保障
+                target.classList.add('speech-highlighting-active');
+                
+                // 记录高亮的元素
+                window.highlightedElements.push(target);
+                
+                // 自动滚动到高亮元素
+                scrollToElement(target);
+                
+                console.log('已成功高亮元素:', target);
+            } else {
+                console.warn('没有找到要高亮的元素');
+                // 尝试使用原始的高亮方法作为后备
+                highlightCurrentElement(window.currentSegmentIndex);
+            }
+        } catch (error) {
+            console.error('高亮当前元素时出错:', error);
+            // 出错时尝试使用原始的高亮方法作为后备
+            highlightCurrentElement(window.currentSegmentIndex);
+        }
+
+        // 创建新的语音实例
+        const utterance = new SpeechSynthesisUtterance(text);
+
+        // 处理文本中的朗读提示标记
+        let processedText = text;
+
+        // 处理强调标记（通过调整语速来实现重读效果）
+        let emphasisParts = [];
+        let currentText = processedText;
+
+        // 提取带有强调标记的部分
+        const emphasisRegex = /\[强调\](.*?)\[\/强调\]/g;
+        let match;
+        let lastIndex = 0;
+
+        while ((match = emphasisRegex.exec(processedText)) !== null) {
+            // 添加强调标记前的文本（正常语速）
+            if (match.index > lastIndex) {
+                emphasisParts.push({
+                    text: processedText.substring(lastIndex, match.index),
+                    isEmphasis: false
+                });
+            }
+
+            // 添加强调部分（较慢语速以表示重读）
+            emphasisParts.push({
+                text: match[1],
+                isEmphasis: true
+            });
+
+            lastIndex = match.index + match[0].length;
+        }
+
+        // 添加剩余的文本
+        if (lastIndex < processedText.length) {
+            emphasisParts.push({
+                text: processedText.substring(lastIndex),
+                isEmphasis: false
+            });
+        }
+
+        // 处理停顿标记
+        for (let i = 0; i < emphasisParts.length; i++) {
+            let part = emphasisParts[i];
+            // 替换停顿标记为实际的停顿（通过在文本中插入适当的停顿提示）
+            part.text = part.text.replace(/\[停顿=(\d+)\]/g, '。'); // 用句号替代停顿标记，让语音引擎自然停顿
+        }
+
+        // 使用全局保存的语音和参数，确保整个朗读过程中保持一致
+        if (window.currentVoice) {
+            utterance.voice = window.currentVoice;
+            utterance.lang = window.currentVoice.lang;
+        } else {
+            // 如果没有保存的语音，使用默认设置
+            utterance.lang = 'zh-CN';
+        }
+
+        // 基本语速设置
+        utterance.rate = window.currentRate;
+        utterance.pitch = window.currentPitch;
+
+        // 如果只有一个部分，直接设置文本
+        if (emphasisParts.length === 1) {
+            utterance.text = emphasisParts[0].text;
+            // 如果是强调部分，调整语速
+            if (emphasisParts[0].isEmphasis) {
+                utterance.rate = window.emphasisRate;
+            }
+        } else {
+            // 如果有多个部分，先处理第一个部分
+            utterance.text = emphasisParts[0].text;
+            if (emphasisParts[0].isEmphasis) {
+                utterance.rate = window.emphasisRate;
+            }
+
+            // 记录当前处理的部分索引
+            window.currentEmphasisIndex = 0;
+            window.emphasisParts = emphasisParts;
+        }
+
         // 设置错误处理
         utterance.onerror = (event) => {
             console.error('语音朗读错误:', event);
@@ -267,45 +1031,167 @@
             window.currentSegmentIndex++;
             speakNextSegment();
         };
-        
-        // 朗读结束时继续下一段
+
+        // 朗读结束时处理逻辑
         utterance.onend = () => {
             if (!window.isStopped && !window.isPaused) {
-                window.currentSegmentIndex++;
-                // 添加一个小延迟，使段落之间有短暂停顿
-                setTimeout(speakNextSegment, 300);
+                // 检查是否有多个强调部分需要处理
+                if (window.emphasisParts && window.emphasisParts.length > window.currentEmphasisIndex + 1) {
+                    // 继续处理下一个强调部分
+                    window.currentEmphasisIndex++;
+                    const nextPart = window.emphasisParts[window.currentEmphasisIndex];
+
+                    // 创建新的语音实例处理下一部分
+                    const nextUtterance = new SpeechSynthesisUtterance(nextPart.text);
+
+                    // 复制当前语音设置
+                    if (window.currentVoice) {
+                        nextUtterance.voice = window.currentVoice;
+                        nextUtterance.lang = window.currentVoice.lang;
+                    }
+                    nextUtterance.rate = nextPart.isEmphasis ? window.emphasisRate : window.currentRate;
+                    nextUtterance.pitch = window.currentPitch;
+
+                    // 设置相同的事件处理
+                    nextUtterance.onerror = utterance.onerror;
+                    nextUtterance.onend = utterance.onend;
+
+                    // 开始朗读下一部分
+                    speechSynthesis.speak(nextUtterance);
+                } else {
+                    // 所有强调部分处理完毕，继续下一句子
+                    window.currentSegmentIndex++;
+
+                    // 清除强调部分的引用
+                    window.emphasisParts = null;
+                    window.currentEmphasisIndex = 0;
+
+                    // 检查是否是代码块，添加更长的停顿
+                    const isCodeBlock = text.includes('【重要代码块');
+                    const pauseTime = isCodeBlock ? window.codePause : window.normalPause;
+
+                    // 添加适当的停顿后继续朗读下一段
+                    setTimeout(speakNextSegment, pauseTime);
+                }
             }
         };
-        
+
+        // 监听语音朗读的边界事件（已去除高亮逻辑）
+        utterance.onboundary = (event) => {
+            // 仅保留事件监听框架，移除所有高亮相关代码
+            if (event.name === 'word' && event.charIndex >= 0 && event.charLength > 0) {
+                // 边界事件仍保留，但不进行任何高亮操作
+            }
+        };
+
+        // 确保段落结束时正确清除高亮并为下一段落做准备
+        utterance.onend = () => {
+            // 先清除当前段落的高亮
+            clearHighlights();
+
+            // 调用原始的onend处理逻辑
+            if (!window.isStopped && !window.isPaused) {
+                // 检查是否有多个强调部分需要处理
+                if (window.emphasisParts && window.emphasisParts.length > window.currentEmphasisIndex + 1) {
+                    // 继续处理下一个强调部分
+                    window.currentEmphasisIndex++;
+                    const nextPart = window.emphasisParts[window.currentEmphasisIndex];
+
+                    // 创建新的语音实例处理下一部分
+                    const nextUtterance = new SpeechSynthesisUtterance(nextPart.text);
+
+                    // 复制当前语音设置
+                    if (window.currentVoice) {
+                        nextUtterance.voice = window.currentVoice;
+                        nextUtterance.lang = window.currentVoice.lang;
+                    }
+                    nextUtterance.rate = nextPart.isEmphasis ? window.emphasisRate : window.currentRate;
+                    nextUtterance.pitch = window.currentPitch;
+
+                    // 设置相同的事件处理
+                    nextUtterance.onerror = utterance.onerror;
+                    nextUtterance.onend = utterance.onend;
+
+                    // 开始朗读下一部分
+                    speechSynthesis.speak(nextUtterance);
+                } else {
+                    // 所有强调部分处理完毕，继续下一句子
+                    window.currentSegmentIndex++;
+
+                    // 清除强调部分的引用
+                    window.emphasisParts = null;
+                    window.currentEmphasisIndex = 0;
+
+                    // 检查是否是代码块，添加更长的停顿
+                    const isCodeBlock = text.includes('【重要代码块');
+                    const pauseTime = isCodeBlock ? window.codePause : window.normalPause;
+
+                    // 添加适当的停顿后继续朗读下一段
+                    setTimeout(speakNextSegment, pauseTime);
+                }
+            }
+        };
+
         // 保存当前朗读实例
         window.currentUtterance = utterance;
-        
+
         // 开始朗读
         speechSynthesis.speak(utterance);
     }
-    
+
     // 开始朗读
     function startSpeech() {
+        // 确保高亮CSS已添加
+        addHighlightCSS();
         // 重置状态
         speechSynthesis.cancel();
         window.speechQueue = [];
         window.currentSegmentIndex = 0;
         window.isStopped = false;
         window.isPaused = false;
-        
-        const text = getPageContent();
-        if (!text) {
+        window.currentSentenceIndex = 0;
+        // 清除高亮更新定时器
+        if (window.highlightUpdateTimer) {
+            clearTimeout(window.highlightUpdateTimer);
+            window.highlightUpdateTimer = null;
+        }
+
+        // 清除之前的高亮
+        clearHighlights();
+
+        // 设置默认语速为0.8
+        const rateControl = document.getElementById('speech-rate');
+        if (rateControl && !rateControl.value) {
+            rateControl.value = '0.8';
+        }
+
+        // 在开始朗读时保存当前选择的语音和参数，确保整个朗读过程中使用相同设置
+        const voiceSelect = document.getElementById('speech-voice');
+        const voices = speechSynthesis.getVoices();
+        window.currentVoice = voices.find(voice => voice.name === voiceSelect.value);
+        window.currentRate = parseFloat(document.getElementById('speech-rate').value);
+        window.currentPitch = parseFloat(document.getElementById('speech-pitch').value);
+
+        // 标记元素并构建speechQueue，直接使用sentenceElements
+        const elements = markElementsForSpeech();
+        if (!elements || elements.length === 0) {
             alert('没有找到可朗读的内容');
             return;
         }
-        
-        // 将文本分段
-        window.speechQueue = splitTextIntoSegments(text);
-        
+
+        // 构建speechQueue，每个项包含文本和对应的DOM元素
+        window.speechQueue = elements.map(element => ({
+            text: element.dataset.content,
+            element: element,
+            wrappedElement: element.wrappedElement
+        }));
+
+        console.log('构建完成speechQueue，共', window.speechQueue.length, '个朗读项');
+
         // 更新按钮状态
         updateSpeechControls(true);
-        
-        // 开始朗读第一个段落
+
+        // 开始朗读第一句
         speakNextSegment();
     }
 
@@ -329,13 +1215,24 @@
         window.currentSegmentIndex = 0;
         window.isPaused = false;
         window.isStopped = false;
+        window.currentSentenceIndex = 0;
+        // 清除高亮更新定时器
+        if (window.highlightUpdateTimer) {
+            clearTimeout(window.highlightUpdateTimer);
+            window.highlightUpdateTimer = null;
+        }
+        // 清除高亮并确保样式完全恢复
+        clearHighlights();
+        // 清除强调部分的引用
+        window.emphasisParts = null;
+        window.currentEmphasisIndex = 0;
     }
 
     // 添加事件监听器
     function addEventListeners() {
         // 开始朗读按钮
         document.getElementById('speech-toggle').addEventListener('click', startSpeech);
-        
+
         // 暂停按钮
         document.getElementById('speech-pause').addEventListener('click', () => {
             speechSynthesis.pause();
@@ -343,7 +1240,7 @@
             document.getElementById('speech-resume').disabled = false;
             document.getElementById('speech-pause').disabled = true;
         });
-        
+
         // 继续按钮
         document.getElementById('speech-resume').addEventListener('click', () => {
             if (window.isPaused) {
@@ -356,31 +1253,31 @@
             document.getElementById('speech-resume').disabled = true;
             document.getElementById('speech-pause').disabled = false;
         });
-        
+
         // 停止按钮
         document.getElementById('speech-stop').addEventListener('click', () => {
             speechSynthesis.cancel();
             window.isStopped = true;
             resetSpeechControls();
         });
-        
+
         // 语音列表变化时更新
         speechSynthesis.onvoiceschanged = initVoices;
     }
 
     // 创建页面内的'阅读本文'按钮
     function createPageSpeechButton() {
-        // 等待markdown内容加载完成
+        // 等待markdown内容加载完成，增加延迟时间以确保在移动设备上内容完全渲染
         setTimeout(() => {
             const markdownSection = document.querySelector('.markdown-section');
             if (!markdownSection) return;
-            
+
             // 移除可能存在的旧按钮
             const existingButton = document.getElementById('read-this-page');
             if (existingButton) {
                 existingButton.remove();
             }
-            
+
             // 创建阅读按钮
             const readButton = document.createElement('button');
             readButton.id = 'read-this-page';
@@ -393,33 +1290,33 @@
                 </svg>
                 阅读本文
             `;
-            
+
             // 添加点击事件，确保读取当前页面内容
             readButton.addEventListener('click', startSpeech);
-            
+
             // 添加到markdown内容区域的顶部
             markdownSection.insertBefore(readButton, markdownSection.firstChild);
-        }, 1000); // 延迟确保markdown内容已完全渲染
+        }, 1500); // 增加延迟到1500ms以确保在移动设备上内容完全渲染
     }
-    
+
     // 监听docsify页面切换事件
     function listenForPageChanges() {
         // docsify使用的事件
         if (window.$docsify) {
             // 页面切换完成后重新创建按钮
             window.$docsify.plugins = [
-                function(hook) {
+                function (hook) {
                     // 内容渲染完成后触发
-                    hook.afterEach(function() {
+                    hook.afterEach(function () {
                         createPageSpeechButton();
                     });
                 }
             ].concat(window.$docsify.plugins || []);
         }
-        
+
         // 同时使用通用DOM变化监听作为后备
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
+        const observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
                 if (mutation.type === 'childList') {
                     const markdownSection = document.querySelector('.markdown-section');
                     if (markdownSection && mutation.target === markdownSection) {
@@ -429,7 +1326,7 @@
                 }
             });
         });
-        
+
         // 开始观察markdown-section的变化
         const markdownSection = document.querySelector('.markdown-section');
         if (markdownSection) {
@@ -444,16 +1341,16 @@
     function initSpeech() {
         // 创建控制界面
         createSpeechControls();
-        
+
         // 创建页面内的阅读按钮
         createPageSpeechButton();
-        
+
         // 初始化语音列表
         initVoices();
-        
+
         // 添加事件监听器
         addEventListeners();
-        
+
         // 监听页面切换事件
         listenForPageChanges();
     }
@@ -470,6 +1367,13 @@
     function addSpeechStyles() {
         const style = document.createElement('style');
         style.textContent = `
+            /* 语音高亮样式 */
+            .speech-marker {
+                display: none;
+            }
+            
+            /* 高亮时的样式（通过JavaScript动态添加） */
+            /* 字体放大1.5倍，红色，加粗 */
             .speech-controls {
                 position: fixed;
                 bottom: 20px;
@@ -568,11 +1472,11 @@
             
             /* 页面内阅读按钮样式 */
             .read-this-page-btn {
-                display: flex;
+                display: flex !important;
                 align-items: center;
                 gap: 8px;
                 padding: 12px 24px;
-                margin: 0 0 20px 0;
+                margin: 0 0 20px 0 !important;
                 background: var(--primary-color, #42b983);
                 color: white;
                 border: none;
@@ -582,6 +1486,9 @@
                 cursor: pointer;
                 transition: all 0.3s ease;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                position: relative;
+                z-index: 100;
+                clear: both;
             }
             
             .read-this-page-btn:hover {
@@ -614,10 +1521,16 @@
                 }
                 
                 .read-this-page-btn {
-                    width: 100%;
+                    width: 100% !important;
                     justify-content: center;
-                    padding: 10px 20px;
-                    font-size: 14px;
+                    padding: 14px 20px;
+                    font-size: 15px;
+                    margin: 0 0 20px 0 !important;
+                    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+                    position: relative;
+                    z-index: 100;
+                    display: flex !important;
+                    clear: both;
                 }
             }
         `;
