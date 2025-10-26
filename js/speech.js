@@ -1310,13 +1310,6 @@
         document.body.appendChild(button);
     }
 
-    // 在页面加载完成后添加测试按钮
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', addTestButton);
-    } else {
-        addTestButton();
-    }
-
     // 将文本直接拆分为句子数组，每个句子作为一个朗读单元
     function splitTextIntoSegments(text) {
         const sentences = [];
