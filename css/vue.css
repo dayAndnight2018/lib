@@ -61,7 +61,7 @@ body {
     -webkit-font-smoothing: antialiased;
     color: #34495e;
     font-family: 'FZKai-Z03S',sans-serif,'Source Sans Pro', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.8rem;
+    font-size: 1rem;
     letter-spacing: 0;
     margin: 0;
     overflow-x: hidden;
@@ -638,7 +638,7 @@ body {
 .markdown-section h4,
 .markdown-section strong {
 /*     color: #dd1010; */
-    color: #074dbb;
+    color: #42b983;
     font-weight: 600;
     font-size: 1rem;
     /* text-shadow: 4px 4px 10px grey; */
@@ -692,7 +692,7 @@ body {
     color: gray;
     margin: 2em 0;
     padding: 5px 10px;
-    background: #50cc5010;
+    background: #75b57510;
 }
 .markdown-section blockquote p {
     font-weight: 600;
