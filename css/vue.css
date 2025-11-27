@@ -94,8 +94,8 @@ body {
   overflow-x: hidden;
   background-color: var(--background-color, #f5f3f0);
   background-image: linear-gradient(to bottom, rgba(226, 232, 228, 0.3) 1px, transparent 1px);
-  background-size: 100% 30px;
-  line-height: 1.8;
+  background-size: 100% 32px;
+  line-height: 1.9;
 }
 
 img {
@@ -740,10 +740,11 @@ body.close .content {
     padding: 1.2em 1.5rem;
     margin: 1.5em 0;
     border-radius: 8px;
+    line-height: 1.7;
   }
   .markdown-section pre > code {
     font-size: 0.8rem;
-    line-height: 1.6;
+    line-height: 1.7;
   }
   /* 优化手机端代码块悬停效果 */
   .markdown-section pre:hover {
@@ -758,7 +759,7 @@ body.close .content {
   /* 优化手机端引用文字样式 */
   .markdown-section blockquote p {
     font-size: 0.9rem;
-    line-height: 1.6;
+    line-height: 1.7;
   }
   /* 优化手机端表格单元格样式 */
   .markdown-section th,
@@ -1075,7 +1076,7 @@ section.cover blockquote > p > a:hover {
   text-align: justify;
   text-indent: 2em;
   margin: 1em 0;
-  line-height: 1.8;
+  line-height: 1.9;
 }
 
 .markdown-section p:first-child {
@@ -1134,7 +1135,7 @@ section.cover blockquote > p > a:hover {
 .markdown-section figure,
 .markdown-section p {
   margin: 1em 0;
-  line-height: 1.8;
+  line-height: 1.9;
   text-align: justify;
   text-indent: 2em;
   font-size: 1rem;
@@ -1143,7 +1144,7 @@ section.cover blockquote > p > a:hover {
 .markdown-section p,
 .markdown-section ul,
 .markdown-section ol {
-  line-height: 1.8;
+  line-height: 1.9;
   word-spacing: 0.05rem;
   letter-spacing: 0.01em;
   font-size: 1rem;
@@ -1158,7 +1159,7 @@ section.cover blockquote > p > a:hover {
 .markdown-section ul li,
 .markdown-section ol li {
   margin-bottom: 0.8em;
-  line-height: 1.7;
+  line-height: 1.8;
   font-size: 1rem;
 }
 
@@ -1182,7 +1183,7 @@ section.cover blockquote > p > a:hover {
 .markdown-section blockquote p {
   font-weight: 500;
   margin-left: 0;
-  line-height: 1.7;
+  line-height: 1.8;
   text-indent: 0;
 }
 
@@ -1235,7 +1236,7 @@ section.cover blockquote > p > a:hover {
 .markdown-section pre {
   background-color: rgba(37, 99, 235, 0.05);
   font-family: "Roboto Mono", Monaco, courier, monospace;
-  line-height: 1.7;
+  line-height: 1.8;
   margin: 2em 0;
   overflow: auto;
   padding: 1.8em 2rem;
