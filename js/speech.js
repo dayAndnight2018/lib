@@ -275,7 +275,6 @@
                     background-color: rgba(255, 255, 0, 0.4) !important;
                     transition: all 0.3s ease !important;
                     text-decoration: underline !important;
-                    display: inline-block !important;
                     padding: 2px 4px !important;
                     margin: -2px -4px !important;
                     border-radius: 3px !important;
@@ -1318,7 +1317,7 @@
                 if (content.includes('【重要代码块')) {
                     text += '[停顿=500]' + content + '[停顿=500]。\n';
                 } else if (content.includes('【重要代码：')) {
-                    text += '[强调]' + content + '[/强调][停顿=300]。\n';
+                    text += '[强调]' + content.replace('重要代码：', '') + '[/强调][停顿=300]。\n';
                 } else if (content.startsWith('标题：')) {
                     text += '[停顿=500]' + content + '[停顿=400]。\n';
                 } else if (content.startsWith('小节：')) {
