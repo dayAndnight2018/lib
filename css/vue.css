@@ -105,8 +105,8 @@ body {
 body {
   -webkit-font-smoothing: antialiased;
   color: var(--text-color, #2e2b26);
-  font-family: "Microsoft YaHei", "PingFang SC", "SimHei", "Source Sans Pro", "Helvetica Neue",
-    Arial, sans-serif;
+  font-family: "KaiTi", "STKaiti", "AR PL UKai CN", "楷体", "Microsoft YaHei", "PingFang SC",
+    "SimHei", "Source Sans Pro", "Helvetica Neue", Arial, sans-serif;
   font-size: 1.05rem;
   letter-spacing: 0.02em;
   margin: 0;
@@ -455,7 +455,8 @@ body.sticky .sidebar-toggle {
   padding: 50px 80px 90px;
   position: relative;
   background-color: var(--paper-color, #fefdfb);
-  font-family: "Microsoft YaHei", "PingFang SC", "SimHei", "Source Sans Pro", serif;
+  font-family: "KaiTi", "STKaiti", "AR PL UKai CN", "楷体", "Microsoft YaHei", "PingFang SC",
+    "SimHei", "Source Sans Pro", serif;
   border: 1px solid var(--paper-edge, #e5ded0);
   border-radius: 4px;
   box-shadow: var(--paper-shadow);
@@ -646,12 +647,17 @@ body.close .content {
     padding-top: 20px;
     transition: transform 250ms ease;
   }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "SimHei", "Source Sans Pro", "Helvetica Neue",
+      Arial, sans-serif;
+  }
   .markdown-section {
     margin: 10px;
     padding: 28px 22px 50px;
     max-width: calc(100% - 20px);
     background-size: 100% 2em;
     box-shadow: 0 2px 8px var(--shadow-color, rgba(100, 90, 70, 0.04));
+    font-family: "Microsoft YaHei", "PingFang SC", "SimHei", "Source Sans Pro", serif;
   }
   .markdown-section::before {
     left: 14px;
